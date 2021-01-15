@@ -1,0 +1,20 @@
+CHECKPOINT_DIR: "/snel/share/joel/transformer_modeling/"
+DATA:
+  DATAPATH: "/snel/share/data/chaotic_rnn_data/data_no_inputs/"
+  TRAIN_FILENAME: 'chaotic_rnn_no_inputs_dataset_N50_S50'
+  VAL_FILENAME: 'chaotic_rnn_no_inputs_dataset_N50_S50'
+MODEL:
+  TRIAL_LENGTH: 100
+  LEARNABLE_POSITION: True
+  EMBED_DIM: 2
+TRAIN:
+  LR:
+    SCHEDULE: false
+  LOG_INTERVAL: 250
+  CHECKPOINT_INTERVAL: 250
+  NUM_UPDATES: 5001
+  MASK_RATIO: 0.25
+  WEIGHT_DECAY: 0.0001
+
+  TUNE_EPOCHS_PER_GENERATION: 100
+  TUNE_HP_JSON: './configs/sweep_generic.json'

@@ -1,0 +1,35 @@
+{
+    "MODEL.DROPOUT": {
+        "low": 0.0,
+        "high": 0.3,
+        "sample_fn": "uniform",
+        "explore_wt": 0.3
+    },
+    "MODEL.DROPOUT_RATES": {
+        "low": 0.0,
+        "high": 0.3,
+        "sample_fn": "uniform",
+        "explore_wt": 0.3
+    },
+    "MODEL.DROPOUT_EMBEDDING": {
+        "low": 0.0,
+        "high": 0.3,
+        "sample_fn": "uniform",
+        "explore_wt": 0.3
+    },
+    "TRAIN.LR.INIT": {
+        "low": 1e-5,
+        "high": 5e-3,
+        "explore_wt": 0.3
+    },
+    "TRAIN.MASK_RANDOM_RATIO": {
+        "low": 0.9,
+        "high": 1.0,
+        "sample_fn": "uniform"
+    },
+    "TRAIN.MASK_TOKEN_RATIO": {
+        "low": 0.5,
+        "high": 1.0,
+        "sample_fn": "loguniform"
+    }
+}

@@ -1,0 +1,22 @@
+CHECKPOINT_DIR: "/snel/share/joel/transformer_modeling/"
+DATA:
+  DATAPATH: "/snel/share/data/lfads_lorenz_20ms/"
+  TRAIN_FILENAME: 'lfads_dataset001.h5'
+  VAL_FILENAME: 'lfads_dataset001.h5'
+MODEL:
+  TRIAL_LENGTH: 50
+  LEARNABLE_POSITION: True
+  PRE_NORM: True
+  FIXUP_INIT: True
+  EMBED_DIM: 2 # We embed to 2 here so transformer can use 2 heads. Perf diff is minimal.
+  LOGRATE: True
+TRAIN:
+  LR:
+    SCHEDULE: False
+  LOG_INTERVAL: 50
+  CHECKPOINT_INTERVAL: 500
+  PATIENCE: 2500
+  NUM_UPDATES: 20001
+  MASK_RATIO: 0.25
+
+  TUNE_HP_JSON: './configs/sweep_generic.json'

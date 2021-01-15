@@ -1,0 +1,55 @@
+{
+    "MODEL.DROPOUT": {
+        "low": 0.0,
+        "high": 0.3,
+        "sample_fn": "uniform",
+        "explore_wt": 0.3
+    },
+    "MODEL.DROPOUT_RATES": {
+        "low": 0.0,
+        "high": 0.3,
+        "sample_fn": "uniform",
+        "explore_wt": 0.3
+    },
+    "MODEL.DROPOUT_EMBEDDING": {
+        "low": 0.0,
+        "high": 0.3,
+        "sample_fn": "uniform",
+        "explore_wt": 0.3
+    },
+    "MODEL.CONTEXT_FORWARD": {
+        "low": 4,
+        "high": 32,
+        "sample_fn": "randint",
+        "enforce_limits": false,
+        "is_integer": true
+    },
+    "MODEL.CONTEXT_BACKWARD": {
+        "low": 4,
+        "high": 32,
+        "sample_fn": "randint",
+        "enforce_limits": false,
+        "is_integer": true
+    },
+    "TRAIN.LR.INIT": {
+        "low": 1e-5,
+        "high": 5e-3,
+        "explore_wt": 0.3
+    },
+    "TRAIN.MASK_RANDOM_RATIO": {
+        "low": 0.9,
+        "high": 1.0,
+        "sample_fn": "uniform"
+    },
+    "TRAIN.MASK_TOKEN_RATIO": {
+        "low": 0.5,
+        "high": 1.0,
+        "sample_fn": "loguniform"
+    },
+    "TRAIN.MASK_MAX_SPAN": {
+        "low": 1,
+        "high": 5,
+        "sample_fn": "randint",
+        "is_integer": true
+    }
+}
