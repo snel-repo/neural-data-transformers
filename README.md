@@ -1,6 +1,6 @@
 # Neural Data Transformers
 
-This is the code for the paper "". We provide the code as reference, but we are unable to help debug specific issues e.g. in using the model, at this time.
+This is the code for the paper "Representation learning for neural population activity with Neural DataTransformers". We provide the code as reference, but we are unable to help debug specific issues e.g. in using the model, at this time.
 
 ## Setup
 We recommend you set up your code environment with `conda/miniconda`.
