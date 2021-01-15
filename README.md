@@ -19,7 +19,7 @@ The provided sample configurations in `./configs/arxiv/` were used in the HP swe
 R2 is reported automatically for synthetic datasets. Maze analyses + configurations are unfortunately unavailable at this time.
 
 ## Analysis
-Reference scripts that were used to produce most figures are available in `scripts`. They were created and iterated on as VSCode ntoebooks. They may require external information, run directories, even codebases etc. Scripts are provided to give a sense of analysis procedure, not to use as an out-of-the-box reproducibility notebook.
+Reference scripts that were used to produce most figures are available in `scripts`. They were created and iterated on as VSCode notebooks. They may require external information, run directories, even codebases etc. Scripts are provided to give a sense of analysis procedure, not to use as an out-of-the-box reproducibility notebook.
 
 ## Citation
-
+Pending

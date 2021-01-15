@@ -23,7 +23,7 @@ class tuneNDT(tune.Trainable):
         self.runner.load_device()
         self.runner.load_train_val_data_and_masker()
         num_hidden = self.runner.setup_model(self.runner.device)
-        self.runner.load_aux_tasks_and_optimizer(num_hidden)
+        self.runner.load_optimizer(num_hidden)
 
     def step(self):
         num_epochs = self.epochs_per_generation

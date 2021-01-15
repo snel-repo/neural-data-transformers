@@ -23,7 +23,6 @@ from src import (
 )
 from src.utils import get_inverse_sqrt_schedule
 from src.dataset import DATASET_MODES, SpikesDataset
-from src.aux_tasks import get_task_class
 from src.mask import Masker, UNMASKED_LABEL, DEFAULT_MASK_VAL
 
 """
@@ -62,8 +61,6 @@ class Runner:
         assert config is not None or checkpoint_path is not None
         self.flush_secs = 10
         self.model = None
-        self.aux_tasks = []
-        self.aux_task_names = []
         self.optimizer = None
         self.lr_scheduler = None
         self.device = None
@@ -130,22 +127,8 @@ class Runner:
         self.model = self.model.to(device)
         return num_hidden
 
-    def setup_aux_tasks(self, hidden_size, device, aux_config):
-        task_classes = [get_task_class(name) for name in aux_config.tasks]
-        self.aux_tasks = []
-        self.aux_task_names = aux_config.tasks
-        for i, task_class in enumerate(task_classes):
-            task_config = aux_config[aux_config.tasks[i]]
-            task_inst = task_class(hidden_size, task_config, device, self.config.MODEL.NUM_LAYERS).to(device)
-            task_inst = task_inst.train() # We only ever use aux tasks in a training setting
-            self.aux_tasks.append(task_inst)
-
     def _get_parameters(self):
-        model_params = list(self.model.parameters())
-        aux_task_params = []
-        for task_inst in self.aux_tasks:
-            aux_task_params.extend(task_inst.parameters())
-        return [*model_params, *aux_task_params]
+        return list(self.model.parameters())
 
     def _do_log(self, update):
         return (
@@ -165,7 +148,6 @@ class Runner:
         """
         checkpoint = {
             "state_dict": self.model.state_dict(),
-            "aux_tasks": [task.state_dict() for task in self.aux_tasks],
             "optim_state": None if self.optimizer is None else self.optimizer.state_dict(),
             "lr_scheduler": None if self.lr_scheduler is None else self.lr_scheduler.state_dict(),
             "config": self.config,
@@ -220,8 +202,6 @@ class Runner:
         if self.model is None:
             self.setup_model(self.device)
         self.model.load_state_dict(ckpt_dict["state_dict"])
-        for aux_task in self.aux_tasks:
-            aux_task.load_state_dict(ckpt_dict["aux_tasks"][i])
         if "optim_state" in ckpt_dict and self.optimizer is not None:
             self.optimizer.load_state_dict(ckpt_dict["optim_state"])
         if "lr_scheduler" in ckpt_dict and self.lr_scheduler is not None:
@@ -297,9 +277,8 @@ class Runner:
 
         self.masker = Masker(self.config.TRAIN, self.device)
 
-    def load_aux_tasks_and_optimizer(self, num_hidden):
+    def load_optimizer(self, num_hidden):
         train_cfg = self.config.TRAIN
-        self.setup_aux_tasks(num_hidden, self.device, self.config.MODEL.AUX_TASKS)
         if is_learning_model(self.config.MODEL.NAME):
             self.optimizer = AdamW(
                 list(filter(lambda p: p.requires_grad, self._get_parameters())),
@@ -345,7 +324,7 @@ class Runner:
 
         self.load_train_val_data_and_masker()
         num_hidden = self.setup_model(self.device)
-        self.load_aux_tasks_and_optimizer(num_hidden)
+        self.load_optimizer(num_hidden)
 
         if checkpoint_path is not None:
             self.load_checkpoint(checkpoint_path, map_location="cpu")
@@ -408,7 +387,7 @@ class Runner:
                 masked_spikes,
                 mask_labels=labels,
                 rates=rates,
-                return_outputs=len(self.config.MODEL.AUX_TASKS.tasks) > 0,
+                return_outputs=False,
             )
             loss = mlm_loss.mean()
 
