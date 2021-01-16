@@ -1,4 +1,7 @@
 # Neural Data Transformers
+<p align="center">
+    <img width="80%" src="assets/teaser.png" />
+</p>
 
 This is the code for the paper "Representation learning for neural population activity with Neural DataTransformers". We provide the code as reference, but we are unable to help debug specific issues e.g. in using the model, at this time.
 
