@@ -25,4 +25,16 @@ R2 is reported automatically for synthetic datasets. Maze analyses + configurati
 Reference scripts that were used to produce most figures are available in `scripts`. They were created and iterated on as VSCode notebooks. They may require external information, run directories, even codebases etc. Scripts are provided to give a sense of analysis procedure, not to use as an out-of-the-box reproducibility notebook.
 
 ## Citation
-Pending
+```
+@article {ye2021ndt,
+	author = {Ye, Joel and Pandarinath, Chethan},
+	title = {Representation learning for neural population activity with Neural Data Transformers},
+	elocation-id = {2021.01.16.426955},
+	year = {2021},
+	doi = {10.1101/2021.01.16.426955},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2021/01/19/2021.01.16.426955},
+	eprint = {https://www.biorxiv.org/content/early/2021/01/19/2021.01.16.426955.full.pdf},
+	journal = {bioRxiv}
+}
+```
