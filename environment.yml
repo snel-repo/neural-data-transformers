@@ -11,8 +11,8 @@ dependencies:
   - basemap=1.2.0=py36h705c2d8_0
   - blas=1.0=mkl
   - bleach=3.1.4=py_0
-  - ca-certificates=2020.1.1=0
-  - certifi=2020.4.5.2=py36_0
+  - ca-certificates=2020.10.14=0
+  - certifi=2020.6.20=py36_0
   - cudatoolkit=10.1.243=h6bb024c_0
   - cycler=0.10.0=py36_0
   - dbus=1.13.12=h746ee38_0
@@ -23,6 +23,7 @@ dependencies:
   - fontconfig=2.13.0=h9420a91_0
   - freetype=2.9.1=h8a8886c_1
   - geos=3.6.2=heeff764_2
+  - git-lfs=2.6.1=h7b6447c_0
   - glib=2.56.2=hd408876_0
   - gmp=6.1.2=h6c8ec71_1
   - gst-plugins-base=1.14.0=hbbd80ab_1
@@ -72,7 +73,7 @@ dependencies:
   - numpy=1.18.1=py36h4f9e942_0
   - numpy-base=1.18.1=py36hde5b4d6_1
   - olefile=0.46=py36_0
-  - openssl=1.1.1g=h7b6447c_0
+  - openssl=1.1.1h=h7b6447c_0
   - pandas=1.0.4=py36h0573a6f_0
   - pandoc=2.2.3.2=0
   - pandocfilters=1.4.2=py36_1
@@ -190,7 +191,7 @@ dependencies:
     - sentencepiece==0.1.91
     - soupsieve==2.0.1
     - tabulate==0.8.7
-    - tensorboard==2.1.1
+    - tensorboard==2.2.0
     - tensorboard-plugin-wit==1.6.0.post3
     - tensorboardx==2.1
     - tensorflow==2.1.0
