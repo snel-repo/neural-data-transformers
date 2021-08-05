@@ -650,6 +650,7 @@ class Runner:
             # all_attentions = []
             for spikes, _ in data_generator:
                 spikes = spikes.to(self.device)
+                spikes = torch.where(torch.isnan(spikes), torch.zeros_like(spikes), spikes)
                 labels = spikes
                 loss, batch_rates, batch_layer_outputs, *_ = self.model(
                 # loss, batch_rates, batch_layer_outputs, _, _, batch_attn_list, *_ = self.model(
