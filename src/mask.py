@@ -103,7 +103,7 @@ class Masker:
             raise Exception(f"Input mask of size {mask.size()} does not match input size {labels.size()}")
 
         # combine ndt mask with nan mask and label unmasked
-        labels[~mask + nan_mask] = UNMASKED_LABEL
+        labels[torch.logical_or(~mask, nan_mask)] = UNMASKED_LABEL
         #labels[~mask] = UNMASKED_LABEL  # No ground truth for unmasked - use this to mask loss
         
         if not should_mask:
@@ -116,7 +116,7 @@ class Masker:
 
         if self.cfg.USE_ZERO_MASK:
             # combine ndt mask and nan mask and zero-filled masked samples
-            batch[indices_replaced + nan_mask] = 0
+            batch[torch.logical_or(indices_replaced, nan_mask)] = 0
             #batch[indices_replaced] = 0
         else:
             batch[indices_replaced] = max_spikes + 1
