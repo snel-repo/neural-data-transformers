@@ -42,7 +42,9 @@ class SpikesDataset(data.Dataset):
         if len(split_path) == 1 or split_path[-1] == "h5":
             spikes, rates = self.get_data_from_h5(mode, self.datapath)
 
-            spikes = torch.tensor(spikes).long()
+            # avoid using long() for SBTT implementation as it will cast nan into a large infinite number
+            #spikes = torch.tensor(spikes).long()
+            spikes = torch.tensor(spikes)
             if rates is not None:
                 rates = torch.tensor(rates)
         elif split_path[-1] == "pth":

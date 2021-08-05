@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pdb
 
 # Some infeasibly high spike count
 DEFAULT_MASK_VAL = 30
@@ -59,11 +60,16 @@ class Masker:
         """
         batch = batch.clone() # make sure we don't corrupt the input data (which is stored in memory)
 
+        # obtain nan mask
+        nan_mask = torch.isnan(batch)
+        
         mode = self.cfg.MASK_MODE
         should_expand = self.cfg.MASK_MAX_SPAN > 1 and expand_prob > 0.0 and torch.rand(1).item() < expand_prob
         width =  torch.randint(1, self.cfg.MASK_MAX_SPAN + 1, (1, )).item() if should_expand else 1
         mask_ratio = self.cfg.MASK_RATIO if width == 1 else self.cfg.MASK_RATIO / width
+
         labels = batch.clone()
+        
         if mask is None:
             if self.prob_mask is None or self.prob_mask.size() != labels.size():
                 if mode == "full":
@@ -96,7 +102,10 @@ class Masker:
         elif mask.size() != labels.size():
             raise Exception(f"Input mask of size {mask.size()} does not match input size {labels.size()}")
 
-        labels[~mask] = UNMASKED_LABEL  # No ground truth for unmasked - use this to mask loss
+        # combine ndt mask with nan mask and label unmasked
+        labels[~mask + nan_mask] = UNMASKED_LABEL
+        #labels[~mask] = UNMASKED_LABEL  # No ground truth for unmasked - use this to mask loss
+        
         if not should_mask:
             # Only do the generation
             return batch, labels
@@ -104,15 +113,23 @@ class Masker:
         # We use random assignment so the model learns embeddings for non-mask tokens, and must rely on context
         # Most times, we replace tokens with MASK token
         indices_replaced = torch.bernoulli(torch.full(labels.shape, self.cfg.MASK_TOKEN_RATIO, device=mask.device)).bool() & mask
+
         if self.cfg.USE_ZERO_MASK:
-            batch[indices_replaced] = 0
+            # combine ndt mask and nan mask and zero-filled masked samples
+            batch[indices_replaced + nan_mask] = 0
+            #batch[indices_replaced] = 0
         else:
             batch[indices_replaced] = max_spikes + 1
 
         # Random % of the time, we replace masked input tokens with random value (the rest are left intact)
         indices_random = torch.bernoulli(torch.full(labels.shape, self.cfg.MASK_RANDOM_RATIO, device=mask.device)).bool() & mask & ~indices_replaced
-        random_spikes = torch.randint(batch.max(), labels.shape, dtype=torch.long, device=batch.device)
-        batch[indices_random] = random_spikes[indices_random]
+        
+        # deal with data type
+        random_spikes = torch.randint(batch.max().long(), labels.shape, dtype=torch.long, device=batch.device)
+        batch[indices_random] = random_spikes.float()[indices_random]
+        # original implementation
+        #random_spikes = torch.randint(batch.max(), labels.shape, dtype=torch.long, device=batch.device) # modified by FZ 08/04/2021
+        #batch[indices_random] = random_spikes[indices_random] # modified by FZ 08/04/2021
 
         # Leave the other 10% alone
         return batch, labels

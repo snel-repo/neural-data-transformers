@@ -288,7 +288,7 @@ class NeuralDataTransformer(nn.Module):
         self.decoder[0].weight.data.uniform_(-initrange, initrange)
         # nn.init.xavier_uniform_(m.weight)
 
-    def forward(self, src, mask_labels, **kwargs):
+    def forward(self, src, mask_labels, **kwargs):        
         src = src.permute(1, 0, 2) # t x b x n
         src = self.embedder(src) * self.scale
         src = self.pos_encoder(src)
