@@ -374,9 +374,12 @@ class Runner:
         self.model.train()
 
         t_start = time.time()
-        for spikes, rates in self.training_generator:
+        for spikes, rates, heldout_spikes in self.training_generator:
             spikes = spikes.to(self.device)
             rates = rates.to(self.device) if self.config.MODEL.REQUIRES_RATES else None
+            if heldout_spikes is not None:
+                heldout_spikes = heldout_spikes.to(self.device)
+            # TODO update masking
             masked_spikes, labels = self.masker.mask_batch(
                 spikes,
                 max_spikes=self.max_spikes,
@@ -436,7 +439,7 @@ class Runner:
         if (train_cfg.DO_VAL and update % train_cfg.VAL_INTERVAL == 0):
             self.model.eval()
             with torch.no_grad():
-                spikes, rates = self.validation_set.get_dataset()
+                spikes, rates, held_out_spikes = self.validation_set.get_dataset()
                 spikes = spikes.to(self.device)
                 rates = rates.to(self.device)
                 feed_rates = rates if self.config.MODEL.REQUIRES_RATES else None
@@ -573,13 +576,13 @@ class Runner:
             self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
             with torch.no_grad():
-                spikes, rates = test_set.get_dataset()
+                spikes, rates, heldout_spikes = test_set.get_dataset()
                 spikes = spikes.to(self.device)
                 rates = rates.to(self.device)
                 masked_spikes, labels = self.masker.mask_batch(
                     spikes,
                     train_cfg,
-                    max_spikes=max_spikes,
+                    max_spikes=self.max_spikes,
                     should_mask=is_input_masked_model(self.config.MODEL.NAME)
                 )
                 loss, pred_rates, *_ = self.model(masked_spikes, mask_labels=labels)
@@ -648,8 +651,10 @@ class Runner:
             pred_rates = []
             layer_outputs = []
             # all_attentions = []
-            for spikes, _ in data_generator:
+            for spikes, _, heldout_spikes in data_generator:
                 spikes = spikes.to(self.device)
+                if heldout_spikes is not None:
+                    heldout_spikes = heldout_spikes.to(self.device)
                 labels = spikes
                 loss, batch_rates, batch_layer_outputs, *_ = self.model(
                 # loss, batch_rates, batch_layer_outputs, _, _, batch_attn_list, *_ = self.model(
