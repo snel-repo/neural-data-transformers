@@ -41,7 +41,7 @@ class SpikesDataset(data.Dataset):
         self.has_rates = False
         self.has_heldout = True
         if len(split_path) == 1 or split_path[-1] == "h5":
-            spikes, rates, heldout_spikes = self.get_data_from_h5(mode, self.datapath)
+            spikes, rates, heldout_spikes, forward_spikes = self.get_data_from_h5(mode, self.datapath)
 
             spikes = torch.tensor(spikes).long()
             if rates is not None:
@@ -49,6 +49,7 @@ class SpikesDataset(data.Dataset):
             if heldout_spikes is not None:
                 self.has_heldout = True
                 heldout_spikes = torch.tensor(heldout_spikes).long()
+                forward_spikes = torch.tensor(forward_spikes).long()
         elif split_path[-1] == "pth":
             dataset_dict = torch.load(self.datapath)
             spikes = dataset_dict["spikes"]
@@ -56,15 +57,22 @@ class SpikesDataset(data.Dataset):
                 self.has_rates = True
                 rates = dataset_dict["rates"]
             heldout_spikes = None
+            forward_spikes = None
         else:
             raise Exception(f"Unknown dataset extension {split_path[-1]}")
 
         self.num_trials, _, self.num_neurons = spikes.size()
-        self.trial_length = config.MODEL.TRIAL_LENGTH if config.MODEL.TRIAL_LENGTH > 0 else spikes.size(1)
+        self.full_length = config.MODEL.TRIAL_LENGTH <= 0
+        self.trial_length = spikes.size(1) if self.full_length else config.MODEL.TRIAL_LENGTH
+        if self.has_heldout:
+            self.num_neurons += heldout_spikes.size(-1)
+            self.trial_length += forward_spikes.size(1)
         self.spikes = self.batchify(spikes)
         # Fake rates so we can skip None checks everywhere. Use `self.has_rates` when desired
         self.rates = self.batchify(rates) if self.has_rates else torch.zeros_like(spikes)
-        self.heldout_spikes = self.batchify(heldout_spikes) if self.has_heldout else torch.zeros_like(spike)
+        # * else condition below is not precisely correctly shaped as correct shape isn't used
+        self.heldout_spikes = self.batchify(heldout_spikes) if self.has_heldout else torch.zeros_like(spikes)
+        self.forward_spikes = self.batchify(forward_spikes) if self.has_heldout else torch.zeros_like(spikes)
 
         if config.DATA.OVERFIT_TEST:
             if self.logger is not None:
@@ -92,6 +100,8 @@ class SpikesDataset(data.Dataset):
             Returns:
                 x reshaped as num_samples x trial_length x neurons
         """
+        if self.full_length:
+            return x
         trial_time = x.size(1)
         samples_per_trial = trial_time // self.trial_length
         if trial_time % self.trial_length != 0:
@@ -117,11 +127,12 @@ class SpikesDataset(data.Dataset):
         return (
             self.spikes[index],
             None if self.rates is None else self.rates[index],
-            None if self.heldout_spikes is None else self.heldout_spikes[index]
+            None if self.heldout_spikes is None else self.heldout_spikes[index],
+            None if self.heldout_spikes is None else self.forward_spikes[index]
         )
 
     def get_dataset(self):
-        return self.spikes, self.rates, self.heldout_spikes
+        return self.spikes, self.rates, self.heldout_spikes, self.forward_spikes
 
     def get_max_spikes(self):
         return self.spikes.max().item()
@@ -138,19 +149,36 @@ class SpikesDataset(data.Dataset):
                 spikes
                 rates (None if not available)
                 held out spikes (for cosmoothing, None if not available)
+            * Note, rates and held out spikes codepaths conflict
         """
 
         with h5py.File(filepath, 'r') as h5file:
             h5dict = {key: h5file[key][()] for key in h5file.keys()}
-            if 'train_data_heldin' in h5dict: # NLB data
-                train_data = h5dict['train_data_heldin'].astype(np.float32)
-                valid_data = h5dict['eval_data_heldin'].astype(np.float32)
-                train_data_heldout = h5dict['train_data_heldout'].astype(np.float32)
-                valid_data_heldout = h5dict['eval_data_heldout'].astype(np.float32)
+            if 'eval_data_heldin' in h5dict: # NLB data
+                get_key = lambda key: h5dict[key].astype(np.float32)
+                train_data = get_key('train_data_heldin')
+                train_data_fp = get_key('train_data_heldin_forward')
+                train_data_heldout_fp = get_key('train_data_heldout_forward')
+                train_data_all_fp = np.concatenate([train_data_fp, train_data_heldout_fp], -1)
+                valid_data = get_key('eval_data_heldin')
+                train_data_heldout = get_key('train_data_heldout')
+                if 'eval_data_heldout' in h5dict:
+                    valid_data_heldout = get_key('eval_data_heldout')
+                else:
+                    valid_data_heldout = np.zeros((valid_data.shape[0], valid_data.shape[1], train_data_heldout.shape[2]), dtype=np.float32)
+                if 'eval_data_heldin_forward' in h5dict:
+                    valid_data_fp = get_key('eval_data_heldin_forward')
+                    valid_data_heldout_fp = get_key('eval_data_heldout_forward')
+                    valid_data_all_fp = np.concatenate([valid_data_fp, valid_data_heldout_fp], -1)
+                else:
+                    valid_data_all_fp = np.zeros(
+                        (valid_data.shape[0], valid_data.shape[1], valid_data.shape[2] + valid_data_heldout.shape[2]), dtype=np.float32
+                    )
+
                 if mode == DATASET_MODES.train:
-                    return train_data, None, train_data_heldout
+                    return train_data, None, train_data_heldout, train_data_all_fp
                 elif mode == DATASET_MODES.val:
-                    return valid_data, None, valid_data_heldout
+                    return valid_data, None, valid_data_heldout, valid_data_all_fp
             train_data = h5dict['train_data'].astype(np.float32).squeeze()
             valid_data = h5dict['valid_data'].astype(np.float32).squeeze()
             train_rates = None
@@ -165,9 +193,9 @@ class SpikesDataset(data.Dataset):
                     train_rates = torch.log(torch.tensor(train_rates) + self.config.LOG_EPSILON)
                     valid_rates = torch.log(torch.tensor(valid_rates) + self.config.LOG_EPSILON)
         if mode == DATASET_MODES.train:
-            return train_data, train_rates, None
+            return train_data, train_rates, None, None
         elif mode == DATASET_MODES.val:
-            return valid_data, valid_rates, None
+            return valid_data, valid_rates, None, None
         elif mode == DATASET_MODES.trainval:
             # merge training and validation data
             if 'train_inds' in h5dict and 'valid_inds' in h5dict:
@@ -187,6 +215,6 @@ class SpikesDataset(data.Dataset):
                 file_data = np.concatenate([train_data, valid_data], axis=0)
                 if self.has_rates:
                     merged_rates = np.concatenate([train_rates, valid_rates], axis=0)
-            return file_data, merged_rates if self.has_rates else None, None
+            return file_data, merged_rates if self.has_rates else None, None, None
         else: # test unsupported
-            return None, None, None
+            return None, None, None, None

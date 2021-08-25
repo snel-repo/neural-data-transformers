@@ -42,6 +42,8 @@ class Masker:
         max_spikes=DEFAULT_MASK_VAL - 1,
         should_mask=True,
         expand_prob=0.0,
+        heldout_spikes=None,
+        forward_spikes=None,
     ):
         r""" Given complete batch, mask random elements and return true labels separately.
         Modifies batch OUT OF place!
@@ -53,6 +55,7 @@ class Masker:
             mask: Optional mask to use
             max_spikes: in case not zero masking, "mask token"
             expand_prob: with this prob, uniformly expand. else, keep single tokens. UniLM does, with 40% expand to fixed, else keep single.
+            heldout_spikes: None
         returns:
             batch: list of data batches NxTxH, with some elements along H set to -1s (we allow peeking between rates)
             labels: true data (also NxTxH)
@@ -63,6 +66,7 @@ class Masker:
         should_expand = self.cfg.MASK_MAX_SPAN > 1 and expand_prob > 0.0 and torch.rand(1).item() < expand_prob
         width =  torch.randint(1, self.cfg.MASK_MAX_SPAN + 1, (1, )).item() if should_expand else 1
         mask_ratio = self.cfg.MASK_RATIO if width == 1 else self.cfg.MASK_RATIO / width
+
         labels = batch.clone()
         if mask is None:
             if self.prob_mask is None or self.prob_mask.size() != labels.size():
@@ -114,5 +118,12 @@ class Masker:
         random_spikes = torch.randint(batch.max(), labels.shape, dtype=torch.long, device=batch.device)
         batch[indices_random] = random_spikes[indices_random]
 
+        if heldout_spikes is not None:
+            # heldout spikes are all masked
+            batch = torch.cat([batch, torch.zeros_like(heldout_spikes, device=batch.device)], -1)
+            labels = torch.cat([labels, heldout_spikes.to(batch.device)], -1)
+        if forward_spikes is not None:
+            batch = torch.cat([batch, torch.zeros_like(forward_spikes, device=batch.device)], 1)
+            labels = torch.cat([labels, forward_spikes.to(batch.device)], 1)
         # Leave the other 10% alone
         return batch, labels

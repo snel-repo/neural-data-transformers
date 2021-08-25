@@ -38,15 +38,19 @@ def setup_dataset(runner, mode):
     test_set = SpikesDataset(runner.config, runner.config.DATA.VAL_FILENAME, mode=mode, logger=runner.logger)
     runner.logger.info(f"Evaluating on {len(test_set)} samples.")
     test_set.clip_spikes(runner.max_spikes)
-    spikes, rates = test_set.get_dataset()
-    return spikes.to(runner.device), rates.to(runner.device)
+    spikes, rates, heldout_spikes, forward_spikes = test_set.get_dataset()
+    if heldout_spikes is not None:
+        heldout_spikes = heldout_spikes.to(runner.device)
+    if forward_spikes is not None:
+        forward_spikes = forward_spikes.to(runner.device)
+    return spikes.to(runner.device), rates.to(runner.device), heldout_spikes, forward_spikes
 
 def init_by_ckpt(ckpt_path, mode=DATASET_MODES.val):
     runner = Runner(checkpoint_path=ckpt_path)
     runner.model.eval()
     torch.set_grad_enabled(False)
-    spikes, rates = setup_dataset(runner, mode)
-    return runner, spikes, rates
+    spikes, rates, heldout_spikes, forward_spikes = setup_dataset(runner, mode)
+    return runner, spikes, rates, heldout_spikes, forward_spikes
 
 def init(variant, ckpt, base="", prefix="", mode=DATASET_MODES.val):
     runner, ckpt_path = make_runner(variant, ckpt, base, prefix)

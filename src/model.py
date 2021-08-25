@@ -149,9 +149,10 @@ class NeuralDataTransformer(nn.Module):
         Transformer encoder-based dynamical systems decoder. Trained on MLM loss. Returns loss and predicted rates.
     """
 
-    def __init__(self, config, num_neurons, device, max_spikes):
+    def __init__(self, config, trial_length, num_neurons, device, max_spikes):
         super().__init__()
         self.config = config
+        self.trial_length = trial_length
         self.num_neurons = num_neurons
         self.device = device
 
@@ -176,7 +177,7 @@ class NeuralDataTransformer(nn.Module):
             ) # t x b x n -> t x b x (h/num_input = n x self.embed_dim)
 
         self.scale = math.sqrt(self.num_input)
-        self.pos_encoder = PositionalEncoding(config, self.num_input, device)
+        self.pos_encoder = PositionalEncoding(config, trial_length, self.num_input, device)
         self._init_transformer()
 
         self.rate_dropout = nn.Dropout(config.DROPOUT_RATES)
@@ -328,18 +329,17 @@ class PositionalEncoding(nn.Module):
     r"""
     ! FYI - needs even d_model if not learned.
     """
-    def __init__(self, cfg, d_model, device):
+    def __init__(self, cfg, trial_length, d_model, device):
         super().__init__()
         self.dropout = nn.Dropout(p=cfg.DROPOUT_EMBEDDING)
-
-        pe = torch.zeros(cfg.TRIAL_LENGTH, d_model).to(device) # * Can optim to empty
-        position = torch.arange(0, cfg.TRIAL_LENGTH, dtype=torch.float).unsqueeze(1)
+        pe = torch.zeros(trial_length, d_model).to(device) # * Can optim to empty
+        position = torch.arange(0, trial_length, dtype=torch.float).unsqueeze(1)
         if cfg.POSITION.OFFSET:
             position = position + 1
         self.learnable = cfg.LEARNABLE_POSITION
         if self.learnable:
             self.register_buffer('pe', position.long())
-            self.pos_embedding = nn.Embedding(cfg.TRIAL_LENGTH, d_model) # So maybe it's here...?
+            self.pos_embedding = nn.Embedding(trial_length, d_model) # So maybe it's here...?
         else:
             div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
             pe[:, 0::2] = torch.sin(position * div_term)

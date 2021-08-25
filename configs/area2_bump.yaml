@@ -4,12 +4,13 @@ DATA:
   TRAIN_FILENAME: 'area2_bump.h5'
   VAL_FILENAME: 'area2_bump.h5'
 MODEL:
-  TRIAL_LENGTH: 120
+  TRIAL_LENGTH: 0
   LEARNABLE_POSITION: True
   PRE_NORM: True
   FIXUP_INIT: True
   EMBED_DIM: 2 # We embed to 2 here so transformer can use 2 heads. Perf diff is minimal.
   LOGRATE: True
+  NUM_LAYERS: 4
 TRAIN:
   LR:
     SCHEDULE: False
@@ -19,4 +20,5 @@ TRAIN:
   NUM_UPDATES: 20001
   MASK_RATIO: 0.25
 
-  TUNE_HP_JSON: './configs/sweep_generic.json'
+  # Aggressive regularization
+  TUNE_HP_JSON: './configs/sweep_bump.json'

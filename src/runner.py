@@ -108,6 +108,7 @@ class Runner:
         r""" Creates model and assigns to device """
         self.model = get_model_class(self.config.MODEL.NAME)(
             self.config.MODEL,
+            self.trial_length,
             self.num_neurons,
             device,
             max_spikes=self.max_spikes
@@ -156,6 +157,7 @@ class Runner:
             "best_r2": self.best_R2,
             "max_spikes": self.max_spikes,
             "num_neurons": self.num_neurons,
+            "trial_length": self.trial_length,
         }
         checkpoint["extra_state"] = dict( # metadata
             update=self.count_updates,
@@ -197,6 +199,8 @@ class Runner:
         ckpt_dict = torch.load(checkpoint_path, *args, **kwargs)
         if "num_neurons" in ckpt_dict:
             self.num_neurons = ckpt_dict["num_neurons"]
+        if "trial_length" in ckpt_dict:
+            self.trial_length = ckpt_dict["trial_length"]
         if "max_spikes" in ckpt_dict:
             self.max_spikes = ckpt_dict["max_spikes"]
         if self.model is None:
@@ -274,7 +278,7 @@ class Runner:
             # )
 
         self.num_neurons = training_set.get_num_neurons()
-
+        self.trial_length = training_set.trial_length
         self.masker = Masker(self.config.TRAIN, self.device)
 
     def load_optimizer(self, num_hidden):
@@ -374,17 +378,19 @@ class Runner:
         self.model.train()
 
         t_start = time.time()
-        for spikes, rates, heldout_spikes in self.training_generator:
+        for spikes, rates, heldout_spikes, forward_spikes in self.training_generator:
             spikes = spikes.to(self.device)
             rates = rates.to(self.device) if self.config.MODEL.REQUIRES_RATES else None
             if heldout_spikes is not None:
                 heldout_spikes = heldout_spikes.to(self.device)
-            # TODO update masking
+                forward_spikes = forward_spikes.to(self.device)
             masked_spikes, labels = self.masker.mask_batch(
                 spikes,
                 max_spikes=self.max_spikes,
                 should_mask=is_input_masked_model(self.config.MODEL.NAME),
-                expand_prob=expand_prob
+                expand_prob=expand_prob,
+                heldout_spikes=heldout_spikes,
+                forward_spikes=forward_spikes
             )
             mlm_loss, _, layer_outputs, *_ = self.model(
                 masked_spikes,
@@ -412,7 +418,6 @@ class Runner:
         if self.optimizer is not None and train_cfg.LR.SCHEDULE:
             self.lr_scheduler.step()
 
-
         if self._do_log(update):
             # * Note we're only logging the loss of the last train step
             with TensorboardWriter(
@@ -439,14 +444,19 @@ class Runner:
         if (train_cfg.DO_VAL and update % train_cfg.VAL_INTERVAL == 0):
             self.model.eval()
             with torch.no_grad():
-                spikes, rates, held_out_spikes = self.validation_set.get_dataset()
+                spikes, rates, heldout_spikes, forward_spikes = self.validation_set.get_dataset()
                 spikes = spikes.to(self.device)
                 rates = rates.to(self.device)
+                if heldout_spikes is not None:
+                    heldout_spikes = heldout_spikes.to(self.device)
+                    forward_spikes = forward_spikes.to(self.device)
                 feed_rates = rates if self.config.MODEL.REQUIRES_RATES else None
                 masked_spikes, labels = self.masker.mask_batch(
                     spikes,
                     max_spikes=self.max_spikes,
-                    should_mask=is_input_masked_model(self.config.MODEL.NAME)
+                    should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                    heldout_spikes=heldout_spikes,
+                    forward_spikes=forward_spikes,
                 )
 
                 loss, pred_rates, *_ = self.model(
@@ -457,9 +467,18 @@ class Runner:
 
                 val_loss = loss.mean()
 
+                # no_mask evaluation should still exclude heldout neurons
+                if heldout_spikes is not None:
+                    spikes = torch.cat([spikes, torch.zeros_like(heldout_spikes)], -1)
+                    spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
+                    no_mask_labels = spikes.clone()
+                    no_mask_labels[..., -heldout_spikes.size(-1)] = -100 # unmasked_label
+                    no_mask_labels[:, -forward_spikes.size(1):,:] = -100 # unmasked_label
+                else:
+                    no_mask_labels = spikes
                 no_mask_loss, pred_rates, *_ = self.model(
                     spikes,
-                    mask_labels=spikes,
+                    mask_labels=no_mask_labels,
                     passthrough=True,
                     rates=rates
                 )
@@ -576,14 +595,19 @@ class Runner:
             self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
             with torch.no_grad():
-                spikes, rates, heldout_spikes = test_set.get_dataset()
+                spikes, rates, heldout_spikes, forward_spikes = test_set.get_dataset()
                 spikes = spikes.to(self.device)
                 rates = rates.to(self.device)
+                if heldout_spikes is not None:
+                    heldout_spikes = heldout_spikes.to(self.device)
+                    forward_spikes = forward_spikes.to(self.device)
                 masked_spikes, labels = self.masker.mask_batch(
                     spikes,
                     train_cfg,
                     max_spikes=self.max_spikes,
-                    should_mask=is_input_masked_model(self.config.MODEL.NAME)
+                    should_mask=is_input_masked_model(self.config.MODEL.NAME),
+                    heldout_spikes=heldout_spikes,
+                    forward_spikes=forward_spikes
                 )
                 loss, pred_rates, *_ = self.model(masked_spikes, mask_labels=labels)
                 test_loss = loss.mean()
@@ -651,11 +675,15 @@ class Runner:
             pred_rates = []
             layer_outputs = []
             # all_attentions = []
-            for spikes, _, heldout_spikes in data_generator:
+            for spikes, _, heldout_spikes, forward_spikes in data_generator:
                 spikes = spikes.to(self.device)
                 if heldout_spikes is not None:
                     heldout_spikes = heldout_spikes.to(self.device)
-                labels = spikes
+                    forward_spikes = forward_spikes.to(self.device)
+                    # Do NOT provide privileged eval info
+                    spikes = torch.cat([spikes, torch.zeros_like(heldout_spikes)], -1)
+                    spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
+                labels = spikes # i.e. predict everything
                 loss, batch_rates, batch_layer_outputs, *_ = self.model(
                 # loss, batch_rates, batch_layer_outputs, _, _, batch_attn_list, *_ = self.model(
                     spikes,
