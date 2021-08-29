@@ -28,15 +28,16 @@ Reference scripts that were used to produce most figures are available in `scrip
 
 ## Citation
 ```
-@article {ye2021ndt,
+@article{ye2021ndt,
+	title = {Representation learning for neural population activity with {Neural} {Data} {Transformers}},
+	issn = {2690-2664},
+	url = {https://nbdt.scholasticahq.com/article/27358-representation-learning-for-neural-population-activity-with-neural-data-transformers},
+	doi = {10.51628/001c.27358},
+	language = {en},
+	urldate = {2021-08-29},
+	journal = {Neurons, Behavior, Data analysis, and Theory},
 	author = {Ye, Joel and Pandarinath, Chethan},
-	title = {Representation learning for neural population activity with Neural Data Transformers},
-	elocation-id = {2021.01.16.426955},
+	month = aug,
 	year = {2021},
-	doi = {10.1101/2021.01.16.426955},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2021/01/19/2021.01.16.426955},
-	eprint = {https://www.biorxiv.org/content/early/2021/01/19/2021.01.16.426955.full.pdf},
-	journal = {bioRxiv}
 }
 ```
