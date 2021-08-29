@@ -172,7 +172,7 @@ class SpikesDataset(data.Dataset):
                     valid_data_all_fp = np.concatenate([valid_data_fp, valid_data_heldout_fp], -1)
                 else:
                     valid_data_all_fp = np.zeros(
-                        (valid_data.shape[0], valid_data.shape[1], valid_data.shape[2] + valid_data_heldout.shape[2]), dtype=np.float32
+                        (valid_data.shape[0], train_data_fp.shape[1], valid_data.shape[2] + valid_data_heldout.shape[2]), dtype=np.float32
                     )
 
                 if mode == DATASET_MODES.train:

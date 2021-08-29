@@ -682,6 +682,7 @@ class Runner:
                     forward_spikes = forward_spikes.to(self.device)
                     # Do NOT provide privileged eval info
                     spikes = torch.cat([spikes, torch.zeros_like(heldout_spikes)], -1)
+                    # my last forward spikes is wacky sizedd...
                     spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
                 labels = spikes # i.e. predict everything
                 loss, batch_rates, batch_layer_outputs, *_ = self.model(

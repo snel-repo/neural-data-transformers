@@ -1,26 +1,27 @@
 CHECKPOINT_DIR: "/snel/share/joel/transformer_modeling/"
 DATA:
   DATAPATH: "/snel/share/data/nlb/"
-  TRAIN_FILENAME: 'area2_bump.h5'
-  VAL_FILENAME: 'area2_bump.h5'
+  TRAIN_FILENAME: 'mc_maze_medium.h5'
+  VAL_FILENAME: 'mc_maze_medium.h5'
 MODEL:
-  TRIAL_LENGTH: 0
+  TRIAL_LENGTH: 0 # 140
   LEARNABLE_POSITION: True
   PRE_NORM: True
   FIXUP_INIT: True
-  EMBED_DIM: 2 # We embed to 2 here so transformer can use 2 heads. Perf diff is minimal.
+  EMBED_DIM: 0
   LOGRATE: True
   NUM_LAYERS: 4
 TRAIN:
   LR:
     WARMUP: 5000
+  MASK_RATIO: 0.25
   WEIGHT_DECAY: 5.0e-05
+  PATIENCE: 3000
   LOG_INTERVAL: 200
   VAL_INTERVAL: 20
   CHECKPOINT_INTERVAL: 1000
-  PATIENCE: 2500
-  NUM_UPDATES: 40001
-  MASK_RATIO: 0.25
+  NUM_UPDATES: 50501
+  MASK_SPAN_RAMP_START: 8000
+  MASK_SPAN_RAMP_END: 12000
 
-  # Aggressive regularization
-  TUNE_HP_JSON: './configs/sweep_bump.json'
+  TUNE_HP_JSON: './configs/mc_maze.json' # This space has more aggressive regularization

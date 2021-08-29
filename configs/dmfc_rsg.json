@@ -1,32 +1,32 @@
 {
     "MODEL.DROPOUT": {
-        "low": 0.2,
-        "high": 0.6,
+        "low": 0.3,
+        "high": 0.7,
         "sample_fn": "uniform",
         "explore_wt": 0.3
     },
     "MODEL.DROPOUT_RATES": {
-        "low": 0.2,
-        "high": 0.6,
+        "low": 0.3,
+        "high": 0.7,
         "sample_fn": "uniform",
         "explore_wt": 0.3
     },
     "MODEL.DROPOUT_EMBEDDING": {
-        "low": 0.2,
-        "high": 0.6,
+        "low": 0.3,
+        "high": 0.7,
         "sample_fn": "uniform",
         "explore_wt": 0.3
     },
     "MODEL.CONTEXT_FORWARD": {
-        "low": 4,
-        "high": 100,
+        "low": 40,
+        "high": 240,
         "sample_fn": "randint",
         "enforce_limits": false,
         "is_integer": true
     },
     "MODEL.CONTEXT_BACKWARD": {
-        "low": 4,
-        "high": 100,
+        "low": 40,
+        "high": 240,
         "sample_fn": "randint",
         "enforce_limits": false,
         "is_integer": true
@@ -35,6 +35,12 @@
         "low": 1e-5,
         "high": 5e-3,
         "explore_wt": 0.3
+    },
+    "TRAIN.LR.WARMUP": {
+        "low": 0,
+        "high": 2000,
+        "sample_fn": "randint",
+        "is_integer": true
     },
     "TRAIN.MASK_RANDOM_RATIO": {
         "low": 0.9,
@@ -48,7 +54,7 @@
     },
     "TRAIN.MASK_MAX_SPAN": {
         "low": 1,
-        "high": 5,
+        "high": 7,
         "sample_fn": "randint",
         "is_integer": true
     }

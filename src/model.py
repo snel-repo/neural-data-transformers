@@ -290,10 +290,11 @@ class NeuralDataTransformer(nn.Module):
         # nn.init.xavier_uniform_(m.weight)
 
     def forward(self, src, mask_labels, **kwargs):
+        # print(src.size())
+        # print(src[:, -10:, -10:])
         src = src.permute(1, 0, 2) # t x b x n
         src = self.embedder(src) * self.scale
         src = self.pos_encoder(src)
-
         src_mask = self._get_or_generate_context_mask(src)
         (
             output,
@@ -317,6 +318,8 @@ class NeuralDataTransformer(nn.Module):
             masked_loss = topk_mask.scatter(0, indices, topk)
 
         masked_loss = masked_loss.mean()
+
+        # print(pred_rates[:, -10:, -10:])
 
         return (
             masked_loss.unsqueeze(0),
