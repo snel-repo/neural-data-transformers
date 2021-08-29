@@ -39,7 +39,7 @@ class SpikesDataset(data.Dataset):
         split_path = self.datapath.split(".")
 
         self.has_rates = False
-        self.has_heldout = True
+        self.has_heldout = False
         if len(split_path) == 1 or split_path[-1] == "h5":
             spikes, rates, heldout_spikes, forward_spikes = self.get_data_from_h5(mode, self.datapath)
 
@@ -80,9 +80,6 @@ class SpikesDataset(data.Dataset):
             self.spikes = self.spikes[:2]
             self.rates = self.rates[:2]
             self.num_trials = 2
-            # self.spikes = torch.ones_like(self.spikes) * 5 # Yes, this works...
-            # self.spikes = self.spikes[:10]
-            # self.rates = self.rates[:10]
         elif hasattr(config.DATA, "RANDOM_SUBSET_TRIALS") and config.DATA.RANDOM_SUBSET_TRIALS < 1.0 and mode == DATASET_MODES.train:
             if self.logger is not None:
                 self.logger.warning(f"!!!!! Training on {config.DATA.RANDOM_SUBSET_TRIALS} of the data with seed {config.SEED}.")
@@ -175,6 +172,7 @@ class SpikesDataset(data.Dataset):
                         (valid_data.shape[0], train_data_fp.shape[1], valid_data.shape[2] + valid_data_heldout.shape[2]), dtype=np.float32
                     )
 
+                # NLB data does not have ground truth rates
                 if mode == DATASET_MODES.train:
                     return train_data, None, train_data_heldout, train_data_all_fp
                 elif mode == DATASET_MODES.val:
@@ -183,7 +181,7 @@ class SpikesDataset(data.Dataset):
             valid_data = h5dict['valid_data'].astype(np.float32).squeeze()
             train_rates = None
             valid_rates = None
-            if "train_truth" and "valid_truth" in h5dict:
+            if "train_truth" and "valid_truth" in h5dict: # original LFADS-type datasets
                 self.has_rates = True
                 train_rates = h5dict['train_truth'].astype(np.float32)
                 valid_rates = h5dict['valid_truth'].astype(np.float32)

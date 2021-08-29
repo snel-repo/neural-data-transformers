@@ -253,7 +253,6 @@ class Runner:
         if self.config.TRAIN.LR.INIT != config.TRAIN.LR.INIT and self.optimizer is not None:
             for g in self.optimizer.param_groups:
                 g['lr'] = config.TRAIN.LR.INIT # Manualy override of LR
-            # When do we use update_config, vs save/load checkpoint?
         self.config = config
         if self.masker is not None:
             self.masker.config = config.TRAIN
@@ -381,9 +380,12 @@ class Runner:
         for spikes, rates, heldout_spikes, forward_spikes in self.training_generator:
             spikes = spikes.to(self.device)
             rates = rates.to(self.device) if self.config.MODEL.REQUIRES_RATES else None
-            if heldout_spikes is not None:
+            if self.training_generator.dataset.has_heldout:
                 heldout_spikes = heldout_spikes.to(self.device)
                 forward_spikes = forward_spikes.to(self.device)
+            else:
+                heldout_spikes = None
+                forward_spikes = None
             masked_spikes, labels = self.masker.mask_batch(
                 spikes,
                 max_spikes=self.max_spikes,
@@ -447,9 +449,12 @@ class Runner:
                 spikes, rates, heldout_spikes, forward_spikes = self.validation_set.get_dataset()
                 spikes = spikes.to(self.device)
                 rates = rates.to(self.device)
-                if heldout_spikes is not None:
+                if self.validation_set.has_heldout:
                     heldout_spikes = heldout_spikes.to(self.device)
                     forward_spikes = forward_spikes.to(self.device)
+                else:
+                    heldout_spikes = None
+                    forward_spikes = None
                 feed_rates = rates if self.config.MODEL.REQUIRES_RATES else None
                 masked_spikes, labels = self.masker.mask_batch(
                     spikes,
@@ -598,9 +603,12 @@ class Runner:
                 spikes, rates, heldout_spikes, forward_spikes = test_set.get_dataset()
                 spikes = spikes.to(self.device)
                 rates = rates.to(self.device)
-                if heldout_spikes is not None:
+                if test_set.has_heldout:
                     heldout_spikes = heldout_spikes.to(self.device)
                     forward_spikes = forward_spikes.to(self.device)
+                else:
+                    heldout_spikes = None
+                    forward_spikes = None
                 masked_spikes, labels = self.masker.mask_batch(
                     spikes,
                     train_cfg,
@@ -677,13 +685,15 @@ class Runner:
             # all_attentions = []
             for spikes, _, heldout_spikes, forward_spikes in data_generator:
                 spikes = spikes.to(self.device)
-                if heldout_spikes is not None:
+                if data_generator.dataset.has_heldout:
                     heldout_spikes = heldout_spikes.to(self.device)
                     forward_spikes = forward_spikes.to(self.device)
                     # Do NOT provide privileged eval info
                     spikes = torch.cat([spikes, torch.zeros_like(heldout_spikes)], -1)
-                    # my last forward spikes is wacky sizedd...
                     spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
+                else:
+                    heldout_spikes = None
+                    forward_spikes = None
                 labels = spikes # i.e. predict everything
                 loss, batch_rates, batch_layer_outputs, *_ = self.model(
                 # loss, batch_rates, batch_layer_outputs, _, _, batch_attn_list, *_ = self.model(
