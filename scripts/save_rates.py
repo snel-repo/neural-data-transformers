@@ -41,8 +41,8 @@ def try_savedown(variant, runner, ckpt_path, data_path, save_path):
 
 
 
-run_name = "sr06"
-data_name = "I152_R91_seed0_SR0.6"
+run_name = "sr02"
+data_name = "I152_R30_seed0_SR0.2"
 
 variant = "maze_sbtt"
 #variant = "m700_sbtt"

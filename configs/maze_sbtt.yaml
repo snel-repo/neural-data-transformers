@@ -1,6 +1,8 @@
-CHECKPOINT_DIR: "/snel/share/share/derived/selective_backprop/runs/ndt/sr04/"
+CHECKPOINT_DIR: "/snel/share/share/derived/selective_backprop/runs/ndt/sr02/"
 DATA:
-  DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R61_seed0_SR0.4"
+  DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R30_seed0_SR0.2"
+  #DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R122_seed0_SR0.8"
+  #DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R61_seed0_SR0.4"
   #DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R91_seed0_SR0.6"
   #DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R46_seed0_SR0.3"
   #DATAPATH: "/snel/share/share/derived/selective_backprop/runs/ndt/data/I152_R152_seed0_SR1.0"
