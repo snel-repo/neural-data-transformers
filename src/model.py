@@ -337,13 +337,13 @@ class PositionalEncoding(nn.Module):
         self.dropout = nn.Dropout(p=cfg.DROPOUT_EMBEDDING)
         pe = torch.zeros(trial_length, d_model).to(device) # * Can optim to empty
         position = torch.arange(0, trial_length, dtype=torch.float).unsqueeze(1)
-        if cfg.POSITION.OFFSET:
-            position = position + 1
         self.learnable = cfg.LEARNABLE_POSITION
         if self.learnable:
             self.register_buffer('pe', position.long())
             self.pos_embedding = nn.Embedding(trial_length, d_model) # So maybe it's here...?
         else:
+            if cfg.POSITION.OFFSET:
+                position = position + 1
             div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
             pe[:, 0::2] = torch.sin(position * div_term)
             pe[:, 1::2] = torch.cos(position * div_term)
