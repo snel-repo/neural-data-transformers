@@ -1,4 +1,4 @@
-name: pytorch
+name: ndt_old
 channels:
   - pytorch
   - conda-forge

@@ -5,11 +5,13 @@
 
 This is the code for the paper "Representation learning for neural population activity with Neural Data Transformers". We provide the code as reference, but we are unable to help debug specific issues e.g. in using the model, at this time. NLB-related configuration files are listed directly under `configs/`, whereas original NDT paper configs are under `configs/arxiv/`.
 
+- Want to quickly get started with NLB? Check out `nlb_from_scratch.py` or `nlb_from_scratch.ipynb`.
+
 ## Setup
 We recommend you set up your code environment with `conda/miniconda`.
 The dependencies necessary for this project can then be installed with:
-    `conda env create -f environment.yml`
-This project was developed with Python 3.6.
+    `conda env create -f nlb.yml`
+This project was developed with Python 3.6, and originally with `environment.yml`. `nlb.yml` is a fresh Python 3.7 environment with minimal dependencies, but has not been tested for result reproducibility (no impact expected).
 
 ## Data
 The Lorenz dataset is provided in `data/lfads_lorenz.h5`. This file is stored on this repo with [`git-lfs`](https://git-lfs.github.com/). Therefore, if you've not used `git-lfs` before, please run `git lfs install` and `git lfs pull` to pull down the full h5 file.

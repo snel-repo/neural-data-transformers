@@ -15,6 +15,7 @@ class DATASET_MODES:
     test = "test"
     trainval = "trainval"
 
+NLB_KEY = 'spikes' # curiously, old code thought NLB data keys came as "train_data_heldin" and not "train_spikes_heldin"
 class SpikesDataset(data.Dataset):
     r"""
         Dataset for single file of spike times (loads into memory)
@@ -151,21 +152,21 @@ class SpikesDataset(data.Dataset):
 
         with h5py.File(filepath, 'r') as h5file:
             h5dict = {key: h5file[key][()] for key in h5file.keys()}
-            if 'eval_data_heldin' in h5dict: # NLB data
+            if f'eval_{NLB_KEY}_heldin' in h5dict: # NLB data, presumes both heldout neurons and time are available
                 get_key = lambda key: h5dict[key].astype(np.float32)
-                train_data = get_key('train_data_heldin')
-                train_data_fp = get_key('train_data_heldin_forward')
-                train_data_heldout_fp = get_key('train_data_heldout_forward')
+                train_data = get_key(f'train_{NLB_KEY}_heldin')
+                train_data_fp = get_key(f'train_{NLB_KEY}_heldin_forward')
+                train_data_heldout_fp = get_key(f'train_{NLB_KEY}_heldout_forward')
                 train_data_all_fp = np.concatenate([train_data_fp, train_data_heldout_fp], -1)
-                valid_data = get_key('eval_data_heldin')
-                train_data_heldout = get_key('train_data_heldout')
-                if 'eval_data_heldout' in h5dict:
-                    valid_data_heldout = get_key('eval_data_heldout')
+                valid_data = get_key(f'eval_{NLB_KEY}_heldin')
+                train_data_heldout = get_key(f'train_{NLB_KEY}_heldout')
+                if f'eval_{NLB_KEY}_heldout' in h5dict:
+                    valid_data_heldout = get_key(f'eval_{NLB_KEY}_heldout')
                 else:
                     valid_data_heldout = np.zeros((valid_data.shape[0], valid_data.shape[1], train_data_heldout.shape[2]), dtype=np.float32)
-                if 'eval_data_heldin_forward' in h5dict:
-                    valid_data_fp = get_key('eval_data_heldin_forward')
-                    valid_data_heldout_fp = get_key('eval_data_heldout_forward')
+                if f'eval_{NLB_KEY}_heldin_forward' in h5dict:
+                    valid_data_fp = get_key(f'eval_{NLB_KEY}_heldin_forward')
+                    valid_data_heldout_fp = get_key(f'eval_{NLB_KEY}_heldout_forward')
                     valid_data_all_fp = np.concatenate([valid_data_fp, valid_data_heldout_fp], -1)
                 else:
                     valid_data_all_fp = np.zeros(

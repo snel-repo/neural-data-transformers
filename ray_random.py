@@ -17,7 +17,7 @@ from tune_models import tuneNDT
 from defaults import DEFAULT_CONFIG_DIR
 from src.config.default import flatten
 
-PBT_HOME = path.expanduser('~/ray_results/ndt/gridsearch')
+PBT_HOME = path.expanduser('~/user_data/nlb/ndt_runs/ray/')
 OVERWRITE = True
 PBT_METRIC = 'smth_masked_loss'
 BEST_MODEL_METRIC = 'best_masked_loss'
@@ -112,7 +112,6 @@ def launch_search(exp_config: Union[List[str], str], name: str, workers: int, gp
     else:
         CFG_PATH = path.join(DEFAULT_CONFIG_DIR, exp_config)
     variant_name = path.split(CFG_PATH)[1].split('.')[0]
-    variant_name = variant_name + "_lite"
     # Ok, now update the paths in the config
     if seed > 0:
         variant_name = f"{variant_name}-s{seed}"
