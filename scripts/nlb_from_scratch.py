@@ -12,7 +12,7 @@ Run to setup requirements:
     - conda install seaborn
     - pip install yacs pytorch_transformers tensorboard "ray[tune]" sklearn
     - pip install dandi "pynwb>=2.0.0"
-    Or from environment.yaml
+    Or from nlb.yaml
 
     Then,
     - conda develop ~/path/to/nlb_tools
@@ -75,11 +75,16 @@ print(train_spikes_heldin.shape)
 
 # Split for evaluation is same as phase name
 eval_split = phase
-# Make data tensors
-eval_dict = make_eval_input_tensors(
-    dataset, dataset_name=dataset_name, trial_split=eval_split, save_file=False,
+# eval_dict = make_eval_input_tensors(
+#     dataset, dataset_name=dataset_name, trial_split=eval_split, save_file=False,
+# )
+# Make data tensors - use all chunks including forward prediction for training NDT
+eval_dict = make_train_input_tensors(
+    dataset, dataset_name=dataset_name, trial_split=['val'], save_file=False, include_forward_pred=True,
 )
-print(eval_dict.keys()) # only includes 'eval_spikes_heldout' if available
+eval_dict = {
+    f'eval{key[5:]}': val for key, val in eval_dict.items()
+}
 eval_spikes_heldin = eval_dict['eval_spikes_heldin']
 
 print(eval_spikes_heldin.shape)
@@ -90,7 +95,7 @@ h5_dict = {
 }
 
 h5_target = '/home/joelye/user_data/nlb/mc_maze_small.h5'
-save_to_h5(h5_dict, h5_target)
+save_to_h5(h5_dict, h5_target, overwrite=True)
 
 
 #%%
@@ -125,22 +130,26 @@ import numpy as np
 import torch
 import torch.nn.functional as f
 from torch.utils import data
+from ray import tune
 
 from nlb_tools.evaluation import evaluate
 
 from src.run import prepare_config
 from src.runner import Runner
 from src.dataset import SpikesDataset, DATASET_MODES
-
 from analyze_utils import init_by_ckpt
 
 variant = "mc_maze_small_from_scratch"
 
 is_ray = True
-is_ray = False
+# is_ray = False
 
 if is_ray:
-    ckpt_path = f"/home/joelye/user_data/nlb/ndt_runs/ray/{variant}/best_model/ckpts/{variant}.lve.pth"
+    tune_dir = f"/home/joelye/user_data/nlb/ndt_runs/ray/{variant}"
+    df = tune.ExperimentAnalysis(tune_dir).dataframe()
+    # ckpt_path = f"/home/joelye/user_data/nlb/ndt_runs/ray/{variant}/best_model/ckpts/{variant}.lve.pth"
+    ckpt_dir = df.loc[df["best_masked_loss"].idxmin()].logdir
+    ckpt_path = f"{ckpt_dir}/ckpts/{variant}.lve.pth"
     runner, spikes, rates, heldout_spikes, forward_spikes = init_by_ckpt(ckpt_path, mode=DATASET_MODES.val)
 else:
     ckpt_dir = Path("/home/joelye/user_data/nlb/ndt_runs/")
@@ -164,7 +173,6 @@ eval_rates_heldin_forward, eval_rates_heldout_forward = torch.split(eval_rates_f
 train_rates, _ = torch.split(train_rates, [spikes.size(1), train_rates.size(1) - spikes.size(1)], 1)
 eval_rates_heldin, eval_rates_heldout = torch.split(eval_rates, [spikes.size(-1), heldout_spikes.size(-1)], -1)
 train_rates_heldin, train_rates_heldout = torch.split(train_rates, [spikes.size(-1), heldout_spikes.size(-1)], -1)
-
 #%%
 # * Viz some trials
 trials = [1, 2, 3]
@@ -182,7 +190,6 @@ for trial_index in range(trial_spikes.size(0)):
     axes[0].scatter(spike_times, spike_level * (trial_index + 1)*np.ones_like(spike_times), marker='|', label='Spikes', s=30)
     axes[1].plot(times, trial_rates[trial_index].exp())
 
-
 #%%
 # Submission e.g. as in `basic_example.ipynb`
 # Looks like this model is pretty terrible :/
@@ -192,8 +199,8 @@ output_dict = {
         'train_rates_heldout': train_rates_heldout.cpu().numpy(),
         'eval_rates_heldin': eval_rates_heldin.cpu().numpy(),
         'eval_rates_heldout': eval_rates_heldout.cpu().numpy(),
-        'eval_rates_heldin_forward': eval_rates_heldin_forward.cpu().numpy(),
-        'eval_rates_heldout_forward': eval_rates_heldout_forward.cpu().numpy()
+        # 'eval_rates_heldin_forward': eval_rates_heldin_forward.cpu().numpy(),
+        # 'eval_rates_heldout_forward': eval_rates_heldout_forward.cpu().numpy()
     }
 }
 

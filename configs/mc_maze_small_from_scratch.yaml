@@ -11,8 +11,6 @@ MODEL:
   EMBED_DIM: 0
   LOGRATE: True
   NUM_LAYERS: 4
-  POSITION:
-    OFFSET: False
 TRAIN:
   LR:
     WARMUP: 2000

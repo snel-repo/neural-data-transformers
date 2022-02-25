@@ -41,6 +41,9 @@ _C.DATA.OVERFIT_TEST = False
 _C.DATA.RANDOM_SUBSET_TRIALS = 1.0 # Testing how NDT performs on a variety of dataset sizes
 
 _C.DATA.LOG_EPSILON = 1e-7 # prevent -inf if we use logrates
+# _C.DATA.IGNORE_FORWARD = True # Ignore forward prediction even if it's available in train. Useful if we don't have forward spikes in validation. (system misbehaves if we only have train...)
+# Performance with above seems subpar, i.e. we need forward and heldout together for some reason
+_C.DATA.IGNORE_FORWARD = False
 
 # -----------------------------------------------------------------------------
 # Model

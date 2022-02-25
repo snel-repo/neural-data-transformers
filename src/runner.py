@@ -382,9 +382,11 @@ class Runner:
             rates = rates.to(self.device) if self.config.MODEL.REQUIRES_RATES else None
             if self.training_generator.dataset.has_heldout:
                 heldout_spikes = heldout_spikes.to(self.device)
-                forward_spikes = forward_spikes.to(self.device)
             else:
                 heldout_spikes = None
+            if self.training_generator.dataset.has_forward:
+                forward_spikes = forward_spikes.to(self.device)
+            else:
                 forward_spikes = None
             masked_spikes, labels = self.masker.mask_batch(
                 spikes,
@@ -451,9 +453,11 @@ class Runner:
                 rates = rates.to(self.device)
                 if self.validation_set.has_heldout:
                     heldout_spikes = heldout_spikes.to(self.device)
-                    forward_spikes = forward_spikes.to(self.device)
                 else:
                     heldout_spikes = None
+                if self.validation_set.has_forward:
+                    forward_spikes = forward_spikes.to(self.device)
+                else:
                     forward_spikes = None
                 feed_rates = rates if self.config.MODEL.REQUIRES_RATES else None
                 masked_spikes, labels = self.masker.mask_batch(
@@ -475,12 +479,13 @@ class Runner:
                 # no_mask evaluation should still exclude heldout neurons
                 if heldout_spikes is not None:
                     spikes = torch.cat([spikes, torch.zeros_like(heldout_spikes)], -1)
+                if forward_spikes is not None:
                     spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
-                    no_mask_labels = spikes.clone()
+                no_mask_labels = spikes.clone()
+                if heldout_spikes is not None:
                     no_mask_labels[..., -heldout_spikes.size(-1)] = -100 # unmasked_label
+                if forward_spikes is not None:
                     no_mask_labels[:, -forward_spikes.size(1):,:] = -100 # unmasked_label
-                else:
-                    no_mask_labels = spikes
                 no_mask_loss, pred_rates, *_ = self.model(
                     spikes,
                     mask_labels=no_mask_labels,
@@ -605,9 +610,11 @@ class Runner:
                 rates = rates.to(self.device)
                 if test_set.has_heldout:
                     heldout_spikes = heldout_spikes.to(self.device)
-                    forward_spikes = forward_spikes.to(self.device)
                 else:
                     heldout_spikes = None
+                if test_set.has_forward:
+                    forward_spikes = forward_spikes.to(self.device)
+                else:
                     forward_spikes = None
                 masked_spikes, labels = self.masker.mask_batch(
                     spikes,
@@ -685,14 +692,16 @@ class Runner:
             # all_attentions = []
             for spikes, _, heldout_spikes, forward_spikes in data_generator:
                 spikes = spikes.to(self.device)
+                # Do NOT provide privileged eval info
                 if data_generator.dataset.has_heldout:
                     heldout_spikes = heldout_spikes.to(self.device)
-                    forward_spikes = forward_spikes.to(self.device)
-                    # Do NOT provide privileged eval info
                     spikes = torch.cat([spikes, torch.zeros_like(heldout_spikes)], -1)
-                    spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
                 else:
                     heldout_spikes = None
+                if data_generator.dataset.has_forward:
+                    forward_spikes = forward_spikes.to(self.device)
+                    spikes = torch.cat([spikes, torch.zeros_like(forward_spikes)], 1)
+                else:
                     forward_spikes = None
                 labels = spikes # i.e. predict everything
                 loss, batch_rates, batch_layer_outputs, *_ = self.model(

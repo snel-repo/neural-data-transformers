@@ -1,6 +1,8 @@
-CHECKPOINT_DIR: "/snel/share/joel/transformer_modeling/"
+CHECKPOINT_DIR: "/home/joelye/user_data/nlb/ndt_runs/"
+# CHECKPOINT_DIR: "/snel/share/joel/transformer_modeling/"
 DATA:
-  DATAPATH: "/snel/share/data/nlb/"
+  DATAPATH: "/home/joelye/user_data/nlb/ndt_old/"
+  # DATAPATH: "/snel/share/data/nlb/"
   TRAIN_FILENAME: 'mc_maze_small.h5'
   VAL_FILENAME: 'mc_maze_small.h5'
 MODEL:

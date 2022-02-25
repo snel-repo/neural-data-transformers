@@ -15,11 +15,11 @@ class DATASET_MODES:
     test = "test"
     trainval = "trainval"
 
-NLB_KEY = 'spikes' # curiously, old code thought NLB data keys came as "train_data_heldin" and not "train_spikes_heldin"
 class SpikesDataset(data.Dataset):
     r"""
         Dataset for single file of spike times (loads into memory)
         Lorenz data is NxTxH (H being number of neurons) - we load to T x N x H
+        # ! Note that codepath for forward but not heldout neurons is not tested and likely broken
     """
 
     def __init__(self, config, filename, mode=DATASET_MODES.train, logger=None):
@@ -41,6 +41,7 @@ class SpikesDataset(data.Dataset):
 
         self.has_rates = False
         self.has_heldout = False
+        self.has_forward = False
         if len(split_path) == 1 or split_path[-1] == "h5":
             spikes, rates, heldout_spikes, forward_spikes = self.get_data_from_h5(mode, self.datapath)
 
@@ -50,7 +51,11 @@ class SpikesDataset(data.Dataset):
             if heldout_spikes is not None:
                 self.has_heldout = True
                 heldout_spikes = torch.tensor(heldout_spikes).long()
+            if forward_spikes is not None and not config.DATA.IGNORE_FORWARD:
+                self.has_forward = True
                 forward_spikes = torch.tensor(forward_spikes).long()
+            else:
+                forward_spikes = None
         elif split_path[-1] == "pth":
             dataset_dict = torch.load(self.datapath)
             spikes = dataset_dict["spikes"]
@@ -67,13 +72,14 @@ class SpikesDataset(data.Dataset):
         self.trial_length = spikes.size(1) if self.full_length else config.MODEL.TRIAL_LENGTH
         if self.has_heldout:
             self.num_neurons += heldout_spikes.size(-1)
+        if self.has_forward:
             self.trial_length += forward_spikes.size(1)
         self.spikes = self.batchify(spikes)
         # Fake rates so we can skip None checks everywhere. Use `self.has_rates` when desired
         self.rates = self.batchify(rates) if self.has_rates else torch.zeros_like(spikes)
         # * else condition below is not precisely correctly shaped as correct shape isn't used
         self.heldout_spikes = self.batchify(heldout_spikes) if self.has_heldout else torch.zeros_like(spikes)
-        self.forward_spikes = self.batchify(forward_spikes) if self.has_heldout else torch.zeros_like(spikes)
+        self.forward_spikes = self.batchify(forward_spikes) if self.has_forward else torch.zeros_like(spikes)
 
         if config.DATA.OVERFIT_TEST:
             if self.logger is not None:
@@ -126,7 +132,7 @@ class SpikesDataset(data.Dataset):
             self.spikes[index],
             None if self.rates is None else self.rates[index],
             None if self.heldout_spikes is None else self.heldout_spikes[index],
-            None if self.heldout_spikes is None else self.forward_spikes[index]
+            None if self.forward_spikes is None else self.forward_spikes[index]
         )
 
     def get_dataset(self):
@@ -149,9 +155,14 @@ class SpikesDataset(data.Dataset):
                 held out spikes (for cosmoothing, None if not available)
             * Note, rates and held out spikes codepaths conflict
         """
+        NLB_KEY = 'spikes' # curiously, old code thought NLB data keys came as "train_data_heldin" and not "train_spikes_heldin"
+        NLB_KEY_ALT = 'data'
 
         with h5py.File(filepath, 'r') as h5file:
             h5dict = {key: h5file[key][()] for key in h5file.keys()}
+            if f'eval_{NLB_KEY}_heldin' not in h5dict: # double check
+                if f'eval_{NLB_KEY_ALT}_heldin' in h5dict:
+                    NLB_KEY = NLB_KEY_ALT
             if f'eval_{NLB_KEY}_heldin' in h5dict: # NLB data, presumes both heldout neurons and time are available
                 get_key = lambda key: h5dict[key].astype(np.float32)
                 train_data = get_key(f'train_{NLB_KEY}_heldin')
@@ -163,12 +174,14 @@ class SpikesDataset(data.Dataset):
                 if f'eval_{NLB_KEY}_heldout' in h5dict:
                     valid_data_heldout = get_key(f'eval_{NLB_KEY}_heldout')
                 else:
+                    self.logger.warn('Substituting zero array for heldout neurons. Only done for evaluating models locally, i.e. will disrupt training due to early stopping.')
                     valid_data_heldout = np.zeros((valid_data.shape[0], valid_data.shape[1], train_data_heldout.shape[2]), dtype=np.float32)
                 if f'eval_{NLB_KEY}_heldin_forward' in h5dict:
                     valid_data_fp = get_key(f'eval_{NLB_KEY}_heldin_forward')
                     valid_data_heldout_fp = get_key(f'eval_{NLB_KEY}_heldout_forward')
                     valid_data_all_fp = np.concatenate([valid_data_fp, valid_data_heldout_fp], -1)
                 else:
+                    self.logger.warn('Substituting zero array for heldout forward neurons. Only done for evaluating models locally, i.e. will disrupt training due to early stopping.')
                     valid_data_all_fp = np.zeros(
                         (valid_data.shape[0], train_data_fp.shape[1], valid_data.shape[2] + valid_data_heldout.shape[2]), dtype=np.float32
                     )

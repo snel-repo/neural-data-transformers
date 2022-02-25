@@ -5,6 +5,7 @@ Run grid search for NDT.
 """
 
 from typing import List, Union
+import os
 from os import path
 import json
 import argparse
@@ -18,6 +19,7 @@ from defaults import DEFAULT_CONFIG_DIR
 from src.config.default import flatten
 
 PBT_HOME = path.expanduser('~/user_data/nlb/ndt_runs/ray/')
+os.makedirs(PBT_HOME, exist_ok=True) # ray hangs if this isn't true...
 OVERWRITE = True
 PBT_METRIC = 'smth_masked_loss'
 BEST_MODEL_METRIC = 'best_masked_loss'
